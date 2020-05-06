@@ -25,13 +25,17 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
+import org.graalvm.polyglot.Source;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import som.GraalSOMLanguage;
+import som.Launcher;
 import som.compiler.ProgramDefinitionError;
-import som.vm.Universe;
 
 
 @RunWith(Parameterized.class)
@@ -70,23 +74,32 @@ public class SomTests {
     });
   }
 
-  private final String testName;
+  private final String testSelector;
 
-  public SomTests(final String testName) {
-    this.testName = testName;
+  public SomTests(final String testSelector) {
+    this.testSelector = testSelector;
   }
 
   @Test
   public void testSomeTest() throws ProgramDefinitionError {
-    String[] args = {"-cp", "Smalltalk", "TestSuite/TestHarness.som", testName};
+    int returnCode = 0;
+    String[] args = new String[] {
+        "-cp",
+        "Smalltalk",
+        "TestSuite/TestHarness.som", testSelector};
+    Source source = Launcher.START;
 
-    // Create Universe
-    Universe u = new Universe(true);
+    Context.Builder builder = Context.newBuilder(GraalSOMLanguage.ID).in(System.in)
+                                     .out(System.out).allowAllAccess(true);
+    builder.arguments(GraalSOMLanguage.ID, args);
+    Context context = builder.build();
 
-    // Start interpretation
-    u.interpret(args);
-
-    assertEquals(0, u.lastExitCode());
+    try {
+      context.eval(source);
+    } catch (PolyglotException ex) {
+      returnCode = 1;
+    }
+    assertEquals(0, returnCode);
   }
 
 }

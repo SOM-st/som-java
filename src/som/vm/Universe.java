@@ -28,12 +28,16 @@ package som.vm;
 
 import static som.interpreter.Bytecodes.HALT;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import com.oracle.truffle.api.TruffleLanguage;
+
+import som.GraalSOMLanguage;
 import som.compiler.Disassembler;
 import som.compiler.ProgramDefinitionError;
 import som.compiler.SourcecodeCompiler;
@@ -53,21 +57,38 @@ import som.vmobjects.SString;
 import som.vmobjects.SSymbol;
 
 
-public class Universe {
+public final class Universe {
 
-  public static void main(final String[] arguments) {
-    // Create Universe
-    Universe u = new Universe();
+  private final TruffleLanguage.Env env;
+  private final GraalSOMLanguage    language;
+  private final String              testClass;
+  private final String              testClasspath;
+  public SAbstractObject            objectSystem;
+  private final String              testSelector;
 
-    // Start interpretation
-    try {
-      u.interpret(arguments);
-    } catch (ProgramDefinitionError e) {
-      u.errorExit(e.toString());
-    }
+  public Universe(final TruffleLanguage.Env env, final GraalSOMLanguage language) {
+    this.env = env;
+    this.language = language;
+    this.interpreter = new Interpreter(this);
+    this.symbolTable = new HashMap<String, SSymbol>();
+    this.avoidExit = false;
+    current = this;
+    this.lastExitCode = 0;
+    this.objectSystem = null;
+    this.testSelector = env.getOptions().get(GraalSOMLanguage.TestSelector);
+    this.testClass = env.getOptions().get(GraalSOMLanguage.TestClass);
+    this.testClasspath = env.getOptions().get(GraalSOMLanguage.TestClasspath);
+  }
 
-    // Exit with error code 0
-    u.exit(0);
+  /**
+   * Return the current Truffle environment.
+   */
+  public TruffleLanguage.Env getEnv() {
+    return env;
+  }
+
+  public static Universe getCurrent() {
+    return GraalSOMLanguage.getCurrentContext();
   }
 
   public SAbstractObject interpret(String[] arguments) throws ProgramDefinitionError {
@@ -83,22 +104,16 @@ public class Universe {
     fileSeparator = System.getProperty("file.separator");
   }
 
-  public Universe() {
-    this.interpreter = new Interpreter(this);
-    this.symbolTable = new HashMap<String, SSymbol>();
-    this.avoidExit = false;
-    this.lastExitCode = 0;
-
-    current = this;
+  public boolean isForTesting() {
+    return !testSelector.isEmpty();
   }
 
-  public Universe(final boolean avoidExit) {
-    this.interpreter = new Interpreter(this);
-    this.symbolTable = new HashMap<String, SSymbol>();
-    this.avoidExit = avoidExit;
-    this.lastExitCode = 0;
+  public String testSelector() {
+    return testSelector;
+  }
 
-    current = this;
+  public String testClass() {
+    return testClass;
   }
 
   public static Universe current() {
@@ -127,7 +142,7 @@ public class Universe {
     exit(1);
   }
 
-  private String[] handleArguments(String[] arguments) {
+  public String[] handleArguments(String[] arguments) {
     boolean gotClasspath = false;
     String[] remainingArgs = new String[arguments.length];
     int cnt = 0;
@@ -210,7 +225,7 @@ public class Universe {
   public void setupClassPath(final String cp) {
     // Create a new tokenizer to split up the string of directories
     StringTokenizer tokenizer = new StringTokenizer(cp,
-        pathSeparator);
+        File.pathSeparator);
 
     // Get the default class path of the appropriate size
     classPath = setupDefaultClassPath(tokenizer.countTokens());
@@ -268,6 +283,7 @@ public class Universe {
    */
   public SAbstractObject interpret(final String className,
       final String selector) throws ProgramDefinitionError {
+    setupClassPath(this.testClasspath);
     initializeObjectSystem();
 
     SClass clazz = loadClass(symbolFor(className));
@@ -284,7 +300,7 @@ public class Universe {
   }
 
   private SAbstractObject initialize(final String[] arguments) throws ProgramDefinitionError {
-    SAbstractObject systemObject = initializeObjectSystem();
+    SAbstractObject objectSystem = initializeObjectSystem();
 
     // Start the shell if no filename is given
     if (arguments.length == 0) {
@@ -300,7 +316,7 @@ public class Universe {
     // Convert the arguments into an array
     SArray argumentsArray = newArray(arguments);
 
-    return interpretMethod(systemObject, initialize,
+    return interpretMethod(objectSystem, initialize,
         argumentsArray);
   }
 
@@ -313,7 +329,7 @@ public class Universe {
     return bootstrapMethod;
   }
 
-  private SAbstractObject interpretMethod(final SAbstractObject receiver,
+  public SAbstractObject interpretMethod(final SAbstractObject receiver,
       final SInvokable invokable, final SArray arguments) throws ProgramDefinitionError {
     SMethod bootstrapMethod = createBootstrapMethod();
 
@@ -332,7 +348,7 @@ public class Universe {
     return interpreter.start();
   }
 
-  private SAbstractObject initializeObjectSystem() throws ProgramDefinitionError {
+  public SAbstractObject initializeObjectSystem() throws ProgramDefinitionError {
     // Allocate the nil object
     nilObject = new SObject(null);
 
@@ -409,6 +425,7 @@ public class Universe {
 
     setGlobal(trueSymbol, trueClass);
     setGlobal(falseSymbol, falseClass);
+    this.objectSystem = systemObject;
     return systemObject;
   }
 

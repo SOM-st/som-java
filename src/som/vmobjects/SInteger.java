@@ -29,8 +29,9 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
-import som.vm.Universe;
+import com.oracle.truffle.api.library.ExportMessage;
 
+import som.vm.Universe;
 
 public final class SInteger extends SNumber {
 
@@ -286,4 +287,23 @@ public final class SInteger extends SNumber {
 
     return asSBoolean(result, universe);
   }
+
+
+  /**
+   * INTEROP.
+   * Return Long only.
+   */
+
+  @Override
+  @ExportMessage
+  boolean fitsInLong() {
+    return true;
+  }
+
+  @Override
+  @ExportMessage
+  long asLong()  {
+      return this.embeddedInteger;
+  }
+
 }

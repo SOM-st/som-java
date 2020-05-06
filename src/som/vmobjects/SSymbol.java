@@ -24,9 +24,15 @@
 
 package som.vmobjects;
 
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+
 import som.vm.Universe;
 
 
+@ExportLibrary(InteropLibrary.class)
 public class SSymbol extends SString {
 
   public SSymbol(final String value) {
@@ -81,4 +87,19 @@ public class SSymbol extends SString {
   }
 
   private final int numberOfSignatureArguments;
+
+  /**
+   * INTEROP.
+   */
+
+  @ExportMessage
+  boolean isString() {
+    return true;
+  }
+
+  @ExportMessage
+  final String asString() throws UnsupportedMessageException {
+    return this.getEmbeddedString();
+  }
+
 }

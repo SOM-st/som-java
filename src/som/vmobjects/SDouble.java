@@ -24,9 +24,14 @@
 
 package som.vmobjects;
 
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+
 import som.vm.Universe;
 
 
+@ExportLibrary(InteropLibrary.class)
 public final class SDouble extends SNumber {
 
   private final double embeddedDouble;
@@ -133,5 +138,22 @@ public final class SDouble extends SNumber {
   public SObject primLessThan(final SNumber right, final Universe universe) {
     double r = coerceToDouble(right, universe);
     return asSBoolean(embeddedDouble < r, universe);
+  }
+
+  /**
+   * INTEROP.
+   * Return Double only.
+   */
+
+  @Override
+  @ExportMessage
+  boolean fitsInDouble() {
+    return true;
+  }
+
+  @Override
+  @ExportMessage
+  double asDouble() {
+    return this.embeddedDouble;
   }
 }

@@ -24,19 +24,21 @@ package som.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import som.compiler.ProgramDefinitionError;
-import som.vm.Universe;
+import som.GraalSOMLanguage;
+import som.Launcher;
 import som.vmobjects.SClass;
-import som.vmobjects.SDouble;
-import som.vmobjects.SInteger;
-import som.vmobjects.SSymbol;
 
 
 @RunWith(Parameterized.class)
@@ -47,74 +49,74 @@ public class BasicInterpreterTests {
     return Arrays.asList(new Object[][] {
         // {"Self", "assignSuper", 42, ProgramDefinitionError.class},
 
-        {"MethodCall", "test", 42, SInteger.class},
-        {"MethodCall", "test2", 42, SInteger.class},
+        {"MethodCall", "test", 42, Long.class},
+        {"MethodCall", "test2", 42, Long.class},
 
-        {"NonLocalReturn", "test1", 42, SInteger.class},
-        {"NonLocalReturn", "test2", 43, SInteger.class},
-        {"NonLocalReturn", "test3", 3, SInteger.class},
-        {"NonLocalReturn", "test4", 42, SInteger.class},
-        {"NonLocalReturn", "test5", 22, SInteger.class},
+        {"NonLocalReturn", "test1", 42, Long.class},
+        {"NonLocalReturn", "test2", 43, Long.class},
+        {"NonLocalReturn", "test3", 3, Long.class},
+        {"NonLocalReturn", "test4", 42, Long.class},
+        {"NonLocalReturn", "test5", 22, Long.class},
 
-        {"Blocks", "testArg1", 42, SInteger.class},
-        {"Blocks", "testArg2", 77, SInteger.class},
-        {"Blocks", "testArgAndLocal", 8, SInteger.class},
-        {"Blocks", "testArgAndContext", 8, SInteger.class},
+        {"Blocks", "testArg1", 42, Long.class},
+        {"Blocks", "testArg2", 77, Long.class},
+        {"Blocks", "testArgAndLocal", 8, Long.class},
+        {"Blocks", "testArgAndContext", 8, Long.class},
 
         {"Return", "testReturnSelf", "Return", SClass.class},
         {"Return", "testReturnSelfImplicitly", "Return", SClass.class},
         {"Return", "testNoReturnReturnsSelf", "Return", SClass.class},
-        {"Return", "testBlockReturnsImplicitlyLastValue", 4, SInteger.class},
+        {"Return", "testBlockReturnsImplicitlyLastValue", 4, Long.class},
 
-        {"IfTrueIfFalse", "test", 42, SInteger.class},
-        {"IfTrueIfFalse", "test2", 33, SInteger.class},
-        {"IfTrueIfFalse", "test3", 4, SInteger.class},
+        {"IfTrueIfFalse", "test", 42, Long.class},
+        {"IfTrueIfFalse", "test2", 33, Long.class},
+        {"IfTrueIfFalse", "test3", 4, Long.class},
 
-        {"CompilerSimplification", "testReturnConstantSymbol", "constant", SSymbol.class},
-        {"CompilerSimplification", "testReturnConstantInt", 42, SInteger.class},
+        {"CompilerSimplification", "testReturnConstantSymbol", "constant", String.class},
+        {"CompilerSimplification", "testReturnConstantInt", 42, Long.class},
         {"CompilerSimplification", "testReturnSelf", "CompilerSimplification", SClass.class},
         {"CompilerSimplification", "testReturnSelfImplicitly", "CompilerSimplification",
             SClass.class},
-        {"CompilerSimplification", "testReturnArgumentN", 55, SInteger.class},
-        {"CompilerSimplification", "testReturnArgumentA", 44, SInteger.class},
-        {"CompilerSimplification", "testSetField", "foo", SSymbol.class},
-        {"CompilerSimplification", "testGetField", 40, SInteger.class},
+        {"CompilerSimplification", "testReturnArgumentN", 55, Long.class},
+        {"CompilerSimplification", "testReturnArgumentA", 44, Long.class},
+        {"CompilerSimplification", "testSetField", "foo", String.class},
+        {"CompilerSimplification", "testGetField", 40, Long.class},
 
-        {"Hash", "testHash", 444, SInteger.class},
+        {"Hash", "testHash", 444, Long.class},
 
-        {"Arrays", "testEmptyToInts", 3, SInteger.class},
-        {"Arrays", "testPutAllInt", 5, SInteger.class},
+        {"Arrays", "testEmptyToInts", 3, Long.class},
+        {"Arrays", "testPutAllInt", 5, Long.class},
         {"Arrays", "testPutAllNil", "Nil", SClass.class},
-        {"Arrays", "testPutAllBlock", 3, SInteger.class},
-        {"Arrays", "testNewWithAll", 1, SInteger.class},
+        {"Arrays", "testPutAllBlock", 3, Long.class},
+        {"Arrays", "testNewWithAll", 1, Long.class},
 
-        {"BlockInlining", "testNoInlining", 1, SInteger.class},
-        {"BlockInlining", "testOneLevelInlining", 1, SInteger.class},
-        {"BlockInlining", "testOneLevelInliningWithLocalShadowTrue", 2, SInteger.class},
-        {"BlockInlining", "testOneLevelInliningWithLocalShadowFalse", 1, SInteger.class},
+        {"BlockInlining", "testNoInlining", 1, Long.class},
+        {"BlockInlining", "testOneLevelInlining", 1, Long.class},
+        {"BlockInlining", "testOneLevelInliningWithLocalShadowTrue", 2, Long.class},
+        {"BlockInlining", "testOneLevelInliningWithLocalShadowFalse", 1, Long.class},
 
-        {"BlockInlining", "testBlockNestedInIfTrue", 2, SInteger.class},
-        {"BlockInlining", "testBlockNestedInIfFalse", 42, SInteger.class},
+        {"BlockInlining", "testBlockNestedInIfTrue", 2, Long.class},
+        {"BlockInlining", "testBlockNestedInIfFalse", 42, Long.class},
 
-        {"BlockInlining", "testDeepNestedInlinedIfTrue", 3, SInteger.class},
-        {"BlockInlining", "testDeepNestedInlinedIfFalse", 42, SInteger.class},
+        {"BlockInlining", "testDeepNestedInlinedIfTrue", 3, Long.class},
+        {"BlockInlining", "testDeepNestedInlinedIfFalse", 42, Long.class},
 
-        {"BlockInlining", "testDeepNestedBlocksInInlinedIfTrue", 5, SInteger.class},
-        {"BlockInlining", "testDeepNestedBlocksInInlinedIfFalse", 43, SInteger.class},
+        {"BlockInlining", "testDeepNestedBlocksInInlinedIfTrue", 5, Long.class},
+        {"BlockInlining", "testDeepNestedBlocksInInlinedIfFalse", 43, Long.class},
 
-        {"BlockInlining", "testDeepDeepNestedTrue", 9, SInteger.class},
-        {"BlockInlining", "testDeepDeepNestedFalse", 43, SInteger.class},
+        {"BlockInlining", "testDeepDeepNestedTrue", 9, Long.class},
+        {"BlockInlining", "testDeepDeepNestedFalse", 43, Long.class},
 
-        {"BlockInlining", "testToDoNestDoNestIfTrue", 2, SInteger.class},
+        {"BlockInlining", "testToDoNestDoNestIfTrue", 2, Long.class},
 
-        {"NonLocalVars", "testWriteDifferentTypes", 3.75, SDouble.class},
+        {"NonLocalVars", "testWriteDifferentTypes", 3.75, Double.class},
 
-        {"ObjectCreation", "test", 1000000, SInteger.class},
+        {"ObjectCreation", "test", 1000000, Long.class},
 
-        {"Regressions", "testSymbolEquality", 1, SInteger.class},
-        {"Regressions", "testSymbolReferenceEquality", 1, SInteger.class},
+        {"Regressions", "testSymbolEquality", 1, Long.class},
+        {"Regressions", "testSymbolReferenceEquality", 1, Long.class},
 
-        {"NumberOfTests", "numberOfTests", 51, SInteger.class}
+        {"NumberOfTests", "numberOfTests", 51, Long.class}
     });
   }
 
@@ -133,49 +135,84 @@ public class BasicInterpreterTests {
     this.resultType = resultType;
   }
 
+  public static Object readValue(final Value val) {
+    Field f;
+    try {
+      f = val.getClass().getDeclaredField("receiver");
+    } catch (NoSuchFieldException | SecurityException e) {
+      throw new RuntimeException(e);
+    }
+    f.setAccessible(true);
+    try {
+      return f.get(val);
+    } catch (IllegalArgumentException | IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   protected void assertEqualsSOMValue(final Object expectedResult, final Object actualResult) {
-    if (resultType == SInteger.class) {
-      long expected = (int) expectedResult;
-      long actual = ((SInteger) actualResult).getEmbeddedInteger();
-      assertEquals(expected, actual);
+    if (resultType == Long.class) {
+      if (actualResult instanceof Long) {
+        long expected = (int) expectedResult;
+        long actual = (long) actualResult;
+        assertEquals(expected, actual);
+      } else {
+        fail("Expected integer result, but got: " + actualResult.toString());
+      }
       return;
     }
 
-    if (resultType == SDouble.class) {
-      double expected = (double) expectedResult;
-      double actual = ((SDouble) actualResult).getEmbeddedDouble();
-      assertEquals(expected, actual, 1e-15);
+    if (resultType == Double.class) {
+      if (actualResult instanceof Double) {
+        double expected = (double) expectedResult;
+        double actual = (double) actualResult;
+        assertEquals(expected, actual, 1e-15);
+      } else {
+        fail("Expected double result, but got: " + actualResult.toString());
+      }
       return;
     }
 
     if (resultType == SClass.class) {
       String expected = (String) expectedResult;
-      String actual = ((SClass) actualResult).getName().getEmbeddedString();
+      String actual = ((SClass) readValue((Value) actualResult)).getName().getEmbeddedString();
       assertEquals(expected, actual);
       return;
     }
 
-    if (resultType == SSymbol.class) {
-      String expected = (String) expectedResult;
-      String actual = ((SSymbol) actualResult).getEmbeddedString();
-      assertEquals(expected, actual);
+    if (resultType == String.class) {
+      if (actualResult instanceof String) {
+        String expected = (String) expectedResult;
+        String actual = (String) actualResult;
+        assertEquals(expected, actual);
+      } else {
+        fail("Expected string result, but got: " + actualResult.toString());
+      }
       return;
     }
     fail("SOM Value handler missing");
   }
 
   @Test
-  public void testBasicInterpreterBehavior() throws ProgramDefinitionError {
-    Universe u = new Universe(true);
-    u.setupClassPath("Smalltalk:TestSuite/BasicInterpreterTests");
+  public void testBasicInterpreterBehavior() throws IOException {
+    String testClasspath = "Smalltalk:TestSuite/BasicInterpreterTests/";
+    Source source = Launcher.START;
+
+    Context.Builder builder = Context.newBuilder(GraalSOMLanguage.ID).in(System.in)
+                                     .out(System.out).allowAllAccess(true);
+    builder.option("GS.TestClasspath", testClasspath);
+    builder.option("GS.TestSelector", testSelector);
+    builder.option("GS.TestClass", testClass);
+    Context context = builder.build();
 
     try {
-      Object actualResult = u.interpret(testClass, testSelector);
-      assertEqualsSOMValue(expectedResult, actualResult);
-    } catch (ProgramDefinitionError e) {
-      if (resultType != ProgramDefinitionError.class) {
-        throw e;
-      }
+      Value actualResult = context.eval(source);
+      assertEqualsSOMValue(expectedResult,
+          actualResult == null ? null : actualResult.as(Object.class));
+    } finally {
+      context.close();
     }
+
   }
+
 }

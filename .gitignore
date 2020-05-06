@@ -1,2 +1,7 @@
 build
 
+/libs/jvmci
+/libs/jvmci.tar.gz
+/libs/checkstyle-8.31-all.jar
+/libs/hamcrest-core-1.3.jar
+/libs/junit-4.12.jar

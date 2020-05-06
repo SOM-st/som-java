@@ -24,12 +24,21 @@
 
 package som.vmobjects;
 
+
+
+
+import com.oracle.truffle.api.interop.TruffleObject;
+
+
 import som.interpreter.Frame;
 import som.interpreter.Interpreter;
 import som.vm.Universe;
 
 
-public abstract class SAbstractObject {
+public abstract class SAbstractObject implements TruffleObject {
+
+
+
 
   public abstract SClass getSOMClass(Universe universe);
 
@@ -90,5 +99,12 @@ public abstract class SAbstractObject {
   @Override
   public String toString() {
     return "a " + getSOMClass(Universe.current()).getName().getEmbeddedString();
+  }
+
+  /**
+   * Used by Truffle interop.
+   */
+  public static boolean isInstance(final TruffleObject obj) {
+    return obj instanceof SAbstractObject;
   }
 }

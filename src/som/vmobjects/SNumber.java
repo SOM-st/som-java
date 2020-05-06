@@ -2,9 +2,15 @@ package som.vmobjects;
 
 import java.math.BigInteger;
 
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+
 import som.vm.Universe;
 
 
+@ExportLibrary(InteropLibrary.class)
 public abstract class SNumber extends SAbstractObject {
   public abstract SString primAsString(Universe universe);
 
@@ -46,6 +52,82 @@ public abstract class SNumber extends SAbstractObject {
     } else {
       return universe.falseObject;
     }
+  }
+
+  /**
+   * INTEROP.
+   * Exporting `isNumber`, so have to implement the following methods, as stated in the
+   * InteropLibrary class.
+   */
+
+  @ExportMessage
+  boolean isNumber() {
+    return true;
+  }
+
+  @ExportMessage
+  boolean fitsInByte() {
+    return false;
+  }
+
+  @ExportMessage
+  boolean fitsInShort() {
+    return false;
+  }
+
+  @ExportMessage
+  boolean fitsInFloat() {
+    return false;
+  }
+
+  @ExportMessage
+  boolean fitsInLong() {
+    return false;
+  }
+
+  @ExportMessage
+  boolean fitsInInt() {
+    return false;
+  }
+
+  @ExportMessage
+  boolean fitsInDouble() {
+    return false;
+  }
+
+  /*
+   * The relevant methods asLong and asDouble are being overriden in respectively the SInteger
+   * and SDouble subclasses
+   */
+
+  @ExportMessage
+  byte asByte() throws UnsupportedMessageException {
+    throw UnsupportedMessageException.create();
+  };
+
+  @ExportMessage
+  short asShort() throws UnsupportedMessageException {
+    throw UnsupportedMessageException.create();
+  }
+
+  @ExportMessage
+  int asInt() throws UnsupportedMessageException {
+    throw UnsupportedMessageException.create();
+  }
+
+  @ExportMessage
+  long asLong() throws UnsupportedMessageException {
+    throw UnsupportedMessageException.create();
+  }
+
+  @ExportMessage
+  float asFloat() throws UnsupportedMessageException {
+    throw UnsupportedMessageException.create();
+  }
+
+  @ExportMessage
+  double asDouble() throws UnsupportedMessageException {
+    throw UnsupportedMessageException.create();
   }
 
 }

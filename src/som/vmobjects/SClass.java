@@ -24,12 +24,11 @@
 
 package som.vmobjects;
 
-import java.lang.reflect.Constructor;
-import java.util.HashMap;
-
 import som.primitives.Primitives;
 import som.vm.Universe;
 
+import java.lang.reflect.Constructor;
+import java.util.HashMap;
 
 public class SClass extends SObject {
 
@@ -302,4 +301,5 @@ public class SClass extends SObject {
 
   // Static field indices and number of class fields
   static final int numberOfClassFields = numberOfObjectFields;
+
 }
