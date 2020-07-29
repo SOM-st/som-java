@@ -29,6 +29,8 @@ import som.vm.Universe;
 
 public class SArray extends SAbstractObject {
 
+  private final SAbstractObject[] indexableFields;
+
   public SArray(final SObject nilObject, long numElements) {
     indexableFields = new SAbstractObject[(int) numElements];
 
@@ -72,10 +74,7 @@ public class SArray extends SAbstractObject {
   }
 
   @Override
-  public SClass getSOMClass(final Universe universe) {
+  public final SClass getSOMClass(final Universe universe) {
     return universe.arrayClass;
   }
-
-  // Private array of indexable fields
-  private final SAbstractObject[] indexableFields;
 }

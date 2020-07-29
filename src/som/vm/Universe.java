@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleLanguage;
 
 import som.GraalSOMLanguage;
@@ -43,21 +44,13 @@ import som.compiler.ProgramDefinitionError;
 import som.compiler.SourcecodeCompiler;
 import som.interpreter.Frame;
 import som.interpreter.Interpreter;
-import som.vmobjects.SAbstractObject;
-import som.vmobjects.SArray;
-import som.vmobjects.SBigInteger;
-import som.vmobjects.SBlock;
-import som.vmobjects.SClass;
-import som.vmobjects.SDouble;
-import som.vmobjects.SInteger;
-import som.vmobjects.SInvokable;
-import som.vmobjects.SMethod;
-import som.vmobjects.SObject;
-import som.vmobjects.SString;
-import som.vmobjects.SSymbol;
+import som.vmobjects.*;
 
 
 public final class Universe {
+
+  private final HashMap<SSymbol, SAbstractObject> globals =
+      new HashMap<SSymbol, SAbstractObject>();
 
   private final TruffleLanguage.Env env;
   private final GraalSOMLanguage    language;
@@ -65,6 +58,19 @@ public final class Universe {
   private final String              testClasspath;
   public SAbstractObject            objectSystem;
   private final String              testSelector;
+  private String[]                  classPath;
+  private boolean                   dumpBytecodes;
+
+  public static final String             pathSeparator;
+  public static final String             fileSeparator;
+  private final Interpreter              interpreter;
+  private final HashMap<String, SSymbol> symbolTable;
+
+  // TODO: this is not how it is supposed to be... it is just a hack to cope
+  // with the use of system.exit in SOM to enable testing
+  private final boolean   avoidExit;
+  private int             lastExitCode;
+  private static Universe current;
 
   public Universe(final TruffleLanguage.Env env, final GraalSOMLanguage language) {
     this.env = env;
@@ -142,6 +148,7 @@ public final class Universe {
     exit(1);
   }
 
+  @TruffleBoundary
   public String[] handleArguments(String[] arguments) {
     boolean gotClasspath = false;
     String[] remainingArgs = new String[arguments.length];
@@ -307,7 +314,8 @@ public final class Universe {
       Shell shell = new Shell(this, interpreter);
       SMethod bootstrapMethod = createBootstrapMethod();
       shell.setBootstrapMethod(bootstrapMethod);
-      return shell.start();
+      Frame bootstrapFrame = this.newFrame(null, bootstrapMethod, null);
+      return shell.start(bootstrapFrame);
     }
 
     // Lookup the initialize invokable on the system class
@@ -320,7 +328,7 @@ public final class Universe {
         argumentsArray);
   }
 
-  private SMethod createBootstrapMethod() {
+  public SMethod createBootstrapMethod() {
     // Create a fake bootstrap method to simplify later frame traversal
     SMethod bootstrapMethod =
         newMethod(symbolFor("bootstrap"), 1, 0, newInteger(0), newInteger(2), null);
@@ -334,7 +342,7 @@ public final class Universe {
     SMethod bootstrapMethod = createBootstrapMethod();
 
     // Create a fake bootstrap frame with the system object on the stack
-    Frame bootstrapFrame = interpreter.pushNewFrame(bootstrapMethod);
+    Frame bootstrapFrame = this.newFrame(null, bootstrapMethod, null);
     bootstrapFrame.push(receiver);
 
     if (arguments != null) {
@@ -342,12 +350,12 @@ public final class Universe {
     }
 
     // Invoke the initialize invokable
-    invokable.invoke(bootstrapFrame, interpreter);
-
-    // Start the interpreter
-    return interpreter.start();
+    // TODO - May be cleaner to make invoke return an SAbstractObject
+    invokable.indirectInvoke(bootstrapFrame, interpreter);
+    return bootstrapFrame.getStackElement(0);
   }
 
+  @TruffleBoundary
   public SAbstractObject initializeObjectSystem() throws ProgramDefinitionError {
     // Allocate the nil object
     nilObject = new SObject(null);
@@ -429,6 +437,7 @@ public final class Universe {
     return systemObject;
   }
 
+  @TruffleBoundary
   public SSymbol symbolFor(final String string) {
     // Lookup the symbol in the symbol table
     SSymbol result = symbolTable.get(string);
@@ -471,6 +480,7 @@ public final class Universe {
     return result;
   }
 
+  @TruffleBoundary
   public SBlock newBlock(final SMethod method, final Frame context, final int arguments)
       throws ProgramDefinitionError {
     // Allocate a new block and set its class to be the block class
@@ -501,7 +511,6 @@ public final class Universe {
 
     // Reset the stack pointer and the bytecode index
     result.resetStackPointer();
-    result.setBytecodeIndex(0);
 
     // Return the freshly allocated frame
     return result;
@@ -512,7 +521,7 @@ public final class Universe {
       final SInteger maxNumStackElements, final List<SAbstractObject> literals) {
     // Allocate a new method and set its class to be the method class
     SMethod result = new SMethod(nilObject, signature, numberOfBytecodes,
-        numberOfLocals, maxNumStackElements, numberOfLiterals, literals);
+        numberOfLocals, maxNumStackElements, numberOfLiterals, literals, language);
     return result;
   }
 
@@ -526,6 +535,7 @@ public final class Universe {
     return result;
   }
 
+  @TruffleBoundary
   public SInteger newInteger(final long value) {
     SInteger result = SInteger.getInteger(value);
     return result;
@@ -561,6 +571,7 @@ public final class Universe {
     return result;
   }
 
+  @TruffleBoundary
   private SSymbol newSymbol(final String string) {
     // Allocate a new symbol and set its class to be the symbol class
     SSymbol result = new SSymbol(string);
@@ -610,6 +621,7 @@ public final class Universe {
     setGlobal(systemClass.getName(), systemClass);
   }
 
+  @TruffleBoundary
   public SAbstractObject getGlobal(final SSymbol name) {
     // Return the global with the given name if it's in the dictionary of
     // globals
@@ -636,6 +648,7 @@ public final class Universe {
     return blockClass;
   }
 
+  @TruffleBoundary
   public SClass getBlockClass(final int numberOfArguments) throws ProgramDefinitionError {
     // Compute the name of the block class with the given number of
     // arguments
@@ -788,21 +801,4 @@ public final class Universe {
 
   public SClass trueClass;
   public SClass falseClass;
-
-  private final HashMap<SSymbol, SAbstractObject> globals =
-      new HashMap<SSymbol, SAbstractObject>();
-  private String[]                                classPath;
-  private boolean                                 dumpBytecodes;
-
-  public static final String             pathSeparator;
-  public static final String             fileSeparator;
-  private final Interpreter              interpreter;
-  private final HashMap<String, SSymbol> symbolTable;
-
-  // TODO: this is not how it is supposed to be... it is just a hack to cope
-  // with the use of system.exit in SOM to enable testing
-  private final boolean avoidExit;
-  private int           lastExitCode;
-
-  private static Universe current;
 }

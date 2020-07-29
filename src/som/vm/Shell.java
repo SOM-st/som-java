@@ -52,28 +52,20 @@ public class Shell {
     bootstrapMethod = method;
   }
 
-  public SAbstractObject start() {
+  public SAbstractObject start(Frame frame) {
 
     BufferedReader in;
     String stmt;
     int counter;
-    int bytecodeIndex;
     SClass myClass;
     SAbstractObject myObject;
     SAbstractObject it;
-    Frame currentFrame;
 
     counter = 0;
     in = new BufferedReader(new InputStreamReader(System.in));
     it = universe.nilObject;
 
     Universe.println("SOM Shell. Type \"quit\" to exit.\n");
-
-    // Create a fake bootstrap frame
-    currentFrame = interpreter.pushNewFrame(bootstrapMethod);
-
-    // Remember the first bytecode index, e.g. index of the HALT instruction
-    bytecodeIndex = currentFrame.getBytecodeIndex();
 
     while (true) {
       try {
@@ -94,35 +86,27 @@ public class Shell {
 
         // If success
         if (myClass != null) {
-          currentFrame = interpreter.getFrame();
-
-          // Go back, so we will evaluate the bootstrap frames halt
-          // instruction again
-          currentFrame.setBytecodeIndex(bytecodeIndex);
 
           // Create and push a new instance of our class on the stack
           myObject = universe.newInstance(myClass);
-          currentFrame.push(myObject);
+          frame.push(myObject);
 
           // Push the old value of "it" on the stack
-          currentFrame.push(it);
+          frame.push(it);
 
           // Lookup the run: method
           SInvokable initialize = myClass.lookupInvokable(
               universe.symbolFor("run:"));
 
           // Invoke the run method
-          initialize.invoke(currentFrame, interpreter);
-
-          // Start the interpreter
-          interpreter.start();
+          initialize.indirectInvoke(frame, interpreter);
 
           // Save the result of the run method
-          it = currentFrame.pop();
+          it = frame.pop();
         }
       } catch (Exception e) {
         Universe.errorPrintln("Caught exception: " + e.getMessage());
-        Universe.errorPrintln("" + interpreter.getFrame().getPreviousFrame());
+        Universe.errorPrintln("" + frame.getPreviousFrame());
       }
     }
   }

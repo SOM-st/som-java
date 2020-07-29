@@ -26,21 +26,45 @@ package som.vmobjects;
 
 import java.util.List;
 
+import com.oracle.truffle.api.*;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.nodes.DirectCallNode;
+import com.oracle.truffle.api.nodes.IndirectCallNode;
+import com.oracle.truffle.api.profiles.ValueProfile;
+
 import som.interpreter.Frame;
 import som.interpreter.Interpreter;
+import som.interpreter.Method;
 import som.vm.Universe;
 
 
 public class SMethod extends SAbstractObject implements SInvokable {
 
-  public SMethod(SObject nilObject, SSymbol signature, int numberOfBytecodes,
-      SInteger numberOfLocals, SInteger maxNumStackElements,
-      int numberOfLiterals, List<SAbstractObject> literals) {
+  private final @CompilationFinal(dimensions = 1) SClass[]          inlineCacheClass;
+  private final @CompilationFinal(dimensions = 1) SInvokable[]      inlineCacheInvokable;
+  private final @CompilationFinal(dimensions = 1) DirectCallNode[]  inlineCacheDirectCallNodes;
+  private final @CompilationFinal(dimensions = 1) ValueProfile[]    receiverProfiles;
+  private final @CompilationFinal(dimensions = 1) SAbstractObject[] literals;
+
+  private final Method     method;
+  private final CallTarget callTarget;
+  private final SSymbol    signature;
+  private SClass           holder;
+  private final SInteger   numberOfLocals;
+  private final SInteger   maximumNumberOfStackElements;
+
+  public SMethod(final SObject nilObject, final SSymbol signature, final int numberOfBytecodes,
+      final SInteger numberOfLocals, final SInteger maxNumStackElements,
+      final int numberOfLiterals, final List<SAbstractObject> literals,
+      final TruffleLanguage<?> language) {
     this.signature = signature;
     this.numberOfLocals = numberOfLocals;
-    this.bytecodes = new byte[numberOfBytecodes];
+    this.method = new Method(language, numberOfBytecodes, this);
+    this.callTarget = Truffle.getRuntime().createCallTarget(method);
     inlineCacheClass = new SClass[numberOfBytecodes];
     inlineCacheInvokable = new SInvokable[numberOfBytecodes];
+    inlineCacheDirectCallNodes = new DirectCallNode[numberOfBytecodes];
+    receiverProfiles = new ValueProfile[numberOfBytecodes];
     maximumNumberOfStackElements = maxNumStackElements;
     this.literals = new SAbstractObject[numberOfLiterals];
 
@@ -81,7 +105,7 @@ public class SMethod extends SAbstractObject implements SInvokable {
   }
 
   @Override
-  public void setHolder(SClass value) {
+  public void setHolder(final SClass value) {
     holder = value;
 
     // Make sure all nested invokables have the same holder
@@ -92,7 +116,7 @@ public class SMethod extends SAbstractObject implements SInvokable {
     }
   }
 
-  public SAbstractObject getConstant(int bytecodeIndex) {
+  public SAbstractObject getConstant(final int bytecodeIndex) {
     // Get the constant associated to a given bytecode index
     return literals[getBytecode(bytecodeIndex + 1)];
   }
@@ -104,24 +128,43 @@ public class SMethod extends SAbstractObject implements SInvokable {
 
   public int getNumberOfBytecodes() {
     // Get the number of bytecodes in this method
-    return bytecodes.length;
+    return method.getNumberOfBytecodes();
   }
 
-  public byte getBytecode(int index) {
+  public byte getBytecode(final int index) {
     // Get the bytecode at the given index
-    return bytecodes[index];
+    return method.getBytecode(index);
   }
 
-  public void setBytecode(int index, byte value) {
+  public void setBytecode(final int index, final byte value) {
     // Set the bytecode at the given index to the given value
-    bytecodes[index] = value;
+    method.setBytecode(index, value);
   }
 
   @Override
-  public void invoke(final Frame frame, final Interpreter interpreter) {
-    // Allocate and push a new frame on the interpreter stack
-    Frame newFrame = interpreter.pushNewFrame(this);
+  public void indirectInvoke(final Frame frame, final Interpreter interpreter) {
+    final Frame newFrame = interpreter.newFrame(frame, this, null);
     newFrame.copyArgumentsFrom(frame);
+
+    IndirectCallNode indirectCallNode = interpreter.getIndirectCallNode();
+    SAbstractObject result =
+        (SAbstractObject) indirectCallNode.call(callTarget, interpreter, newFrame);
+
+    frame.popArgumentsAndPushResult(result, this);
+    newFrame.clearPreviousFrame();
+  }
+
+  public void directInvoke(final Frame frame, final Interpreter interpreter,
+      DirectCallNode directCallNode) {
+
+    CompilerAsserts.partialEvaluationConstant(directCallNode);
+
+    final Frame newFrame = interpreter.newFrame(frame, this, null);
+    newFrame.copyArgumentsFrom(frame);
+    SAbstractObject result = (SAbstractObject) directCallNode.call(interpreter, newFrame);
+
+    frame.popArgumentsAndPushResult(result, this);
+    newFrame.clearPreviousFrame();
   }
 
   @Override
@@ -130,35 +173,49 @@ public class SMethod extends SAbstractObject implements SInvokable {
         + getSignature().toString() + ")";
   }
 
-  public SClass getInlineCacheClass(int bytecodeIndex) {
+  public SClass getInlineCacheClass(final int bytecodeIndex) {
     return inlineCacheClass[bytecodeIndex];
   }
 
-  public SInvokable getInlineCacheInvokable(int bytecodeIndex) {
+  public SInvokable getInlineCacheInvokable(final int bytecodeIndex) {
     return inlineCacheInvokable[bytecodeIndex];
   }
 
-  public void setInlineCache(int bytecodeIndex, SClass receiverClass, SInvokable invokable) {
+  public DirectCallNode getInlineCacheDirectCallNode(final int bytecodeIndex) {
+    CompilerAsserts.partialEvaluationConstant(bytecodeIndex);
+    return inlineCacheDirectCallNodes[bytecodeIndex];
+  }
+
+  public void setReceiverProfile(final int bytecodeIndex,
+      final ValueProfile valueProfile) {
+    receiverProfiles[bytecodeIndex] = valueProfile;
+  }
+
+  public ValueProfile getReceiverProfile(final int bytecodeIndex) {
+    return receiverProfiles[bytecodeIndex];
+  }
+
+  public void setInlineCache(final int bytecodeIndex, final SClass receiverClass,
+      final SInvokable invokable) {
+    CompilerDirectives.transferToInterpreterAndInvalidate();
     inlineCacheClass[bytecodeIndex] = receiverClass;
     inlineCacheInvokable[bytecodeIndex] = invokable;
+    if (invokable != null) {
+      if (invokable.isPrimitive()) {
+        inlineCacheDirectCallNodes[bytecodeIndex] = null;
+      } else {
+        inlineCacheDirectCallNodes[bytecodeIndex] =
+            DirectCallNode.create(((SMethod) invokable).getCallTarget());
+      }
+    }
   }
 
   @Override
-  public SClass getSOMClass(Universe universe) {
+  public SClass getSOMClass(final Universe universe) {
     return universe.methodClass;
   }
 
-  // Private variable holding byte array of bytecodes
-  private final byte[]       bytecodes;
-  private final SClass[]     inlineCacheClass;
-  private final SInvokable[] inlineCacheInvokable;
-
-  private final SAbstractObject[] literals;
-
-  private final SSymbol signature;
-  private SClass        holder;
-
-  // Meta information
-  private final SInteger numberOfLocals;
-  private final SInteger maximumNumberOfStackElements;
+  public CallTarget getCallTarget() {
+    return this.callTarget;
+  }
 }

@@ -270,7 +270,7 @@
         </exec>
     </target>
 
-    <target name="compile-graalSOM" depends="libs" description="Compile GraalSOM">
+    <target name="compile-graalSOM" description="Compile GraalSOM">
         <travis target="compile" start="compile" />
 
         <mkdir dir="${build.dir}"/>
@@ -299,7 +299,7 @@
 
     <target name="compile" depends="libs,compile-graalSOM" description="Compile GraalSOM and dependencies">
     </target>
-
+	
     <target name="jar" depends="compile" description="Package as JAR">
         <jar destfile="${build.dir}/graal-som.jar" basedir="${classes.dir}"></jar>
     </target>

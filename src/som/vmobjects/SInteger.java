@@ -29,9 +29,11 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.library.ExportMessage;
 
 import som.vm.Universe;
+
 
 public final class SInteger extends SNumber {
 
@@ -52,6 +54,7 @@ public final class SInteger extends SNumber {
     embeddedInteger = value;
   }
 
+  @TruffleBoundary
   public static SInteger getInteger(final long value) {
     if (value > MAX_IDENTICAL_INT) {
       return new SInteger(value);
@@ -288,7 +291,6 @@ public final class SInteger extends SNumber {
     return asSBoolean(result, universe);
   }
 
-
   /**
    * INTEROP.
    * Return Long only.
@@ -302,8 +304,8 @@ public final class SInteger extends SNumber {
 
   @Override
   @ExportMessage
-  long asLong()  {
-      return this.embeddedInteger;
+  long asLong() {
+    return this.embeddedInteger;
   }
 
 }

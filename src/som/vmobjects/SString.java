@@ -29,6 +29,9 @@ import som.vm.Universe;
 
 public class SString extends SAbstractObject {
 
+  // Private variable holding the string associated to this symbol
+  private final String string;
+
   public SString(final String value) {
     string = value;
   }
@@ -47,6 +50,4 @@ public class SString extends SAbstractObject {
     return universe.stringClass;
   }
 
-  // Private variable holding the string associated to this symbol
-  private final String string;
 }

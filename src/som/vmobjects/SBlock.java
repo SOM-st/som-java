@@ -24,12 +24,18 @@
 
 package som.vmobjects;
 
+import com.oracle.truffle.api.nodes.IndirectCallNode;
+
 import som.interpreter.Frame;
 import som.interpreter.Interpreter;
 import som.vm.Universe;
 
 
 public class SBlock extends SAbstractObject {
+
+  private final SMethod method;
+  private final Frame   context;
+  private final SClass  blockClass;
 
   public SBlock(final SMethod method, final Frame context, final SClass blockClass) {
     this.method = method;
@@ -46,7 +52,7 @@ public class SBlock extends SAbstractObject {
   }
 
   @Override
-  public SClass getSOMClass(final Universe universe) {
+  public final SClass getSOMClass(final Universe universe) {
     return blockClass;
   }
 
@@ -56,6 +62,8 @@ public class SBlock extends SAbstractObject {
   }
 
   public static class Evaluation extends SPrimitive {
+
+    private final int numberOfArguments;
 
     public Evaluation(int numberOfArguments, final Universe universe) {
       super(computeSignatureString(numberOfArguments), universe);
@@ -72,8 +80,16 @@ public class SBlock extends SAbstractObject {
 
       // Push a new frame and set its context to be the one specified in
       // the block
-      Frame newFrame = interpreter.pushNewFrame(self.getMethod(), context);
+      Frame newFrame = interpreter.newFrame(frame, self.getMethod(), context);
       newFrame.copyArgumentsFrom(frame);
+      IndirectCallNode indirectCallNode = interpreter.getIndirectCallNode();
+
+      SAbstractObject result =
+          (SAbstractObject) indirectCallNode.call(self.getMethod().getCallTarget(),
+              interpreter, newFrame);
+
+      frame.popArgumentsAndPushResult(result, self.getMethod());
+      newFrame.clearPreviousFrame();
     }
 
     private static java.lang.String computeSignatureString(int numberOfArguments) {
@@ -92,10 +108,5 @@ public class SBlock extends SAbstractObject {
       return signatureString;
     }
 
-    private final int numberOfArguments;
   }
-
-  private final SMethod method;
-  private final Frame   context;
-  private final SClass  blockClass;
 }

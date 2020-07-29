@@ -5,6 +5,10 @@ import som.vm.Universe;
 
 public class SObject extends SAbstractObject {
 
+  private final SAbstractObject[] fields;
+  private SClass                  clazz;
+  static final int                numberOfObjectFields = 0;
+
   public SObject(final SObject nilObject) {
     fields = new SAbstractObject[getDefaultNumberOfFields()];
 
@@ -66,11 +70,4 @@ public class SObject extends SAbstractObject {
   public SClass getSOMClass(final Universe universe) {
     return clazz;
   }
-
-  // Private array of fields
-  private final SAbstractObject[] fields;
-  private SClass                  clazz;
-
-  // Static field indices and number of object fields
-  static final int numberOfObjectFields = 0;
 }

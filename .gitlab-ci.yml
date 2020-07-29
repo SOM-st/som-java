@@ -1,0 +1,36 @@
+stages:
+  - build-and-test
+  - benchmark
+
+variables:
+  PYTHONUNBUFFERED: "true"
+  JVMCI_VERSION_CHECK: ignore
+  ECLIPSE_EXE: /home/gitlab-runner/.local/eclipse/eclipse
+  JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
+
+before_script:
+  - git submodule update --init
+
+build_and_test_job:
+  stage: build-and-test
+  tags: [benchmarks]
+  script:
+  - ant checkstyle
+  - ant eclipseformat-check
+  - timeout 5m ant unit-tests som-tests
+
+benchmark_job:
+  stage: benchmark
+  tags: [benchmarks]
+  allow_failure: true
+  script:
+    - ant compile
+    - rebench --without-nice --experiment="CI Benchmark Run Pipeline ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c codespeed.conf GraalSOM
+
+benchmark_job_interp:
+  stage: benchmark
+  tags: [benchmarks]
+  allow_failure: true
+  script:
+    - ant compile
+    - rebench --without-nice --experiment="CI Benchmark Run Pipeline ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c codespeed.conf GraalSOM-interp

@@ -24,9 +24,10 @@
 
 package som.primitives;
 
-import som.vm.Universe;
-import som.interpreter.Interpreter;
 import som.interpreter.Frame;
+import som.interpreter.Interpreter;
+import som.interpreter.RestartLoopException;
+import som.vm.Universe;
 import som.vmobjects.SPrimitive;
 
 
@@ -40,8 +41,7 @@ public class BlockPrimitives extends Primitives {
     installInstancePrimitive(new SPrimitive("restart", universe) {
 
       public void invoke(final Frame frame, final Interpreter interpreter) {
-        frame.setBytecodeIndex(0);
-        frame.resetStackPointer();
+        throw new RestartLoopException();
       }
     });
   }

@@ -35,6 +35,8 @@ import som.vm.Universe;
 @ExportLibrary(InteropLibrary.class)
 public class SSymbol extends SString {
 
+  private final int numberOfSignatureArguments;
+
   public SSymbol(final String value) {
     super(value);
     numberOfSignatureArguments = determineNumberOfSignatureArguments();
@@ -85,8 +87,6 @@ public class SSymbol extends SString {
   public SClass getSOMClass(final Universe universe) {
     return universe.symbolClass;
   }
-
-  private final int numberOfSignatureArguments;
 
   /**
    * INTEROP.

@@ -25,12 +25,17 @@
 
 package som.vmobjects;
 
+import com.oracle.truffle.api.nodes.DirectCallNode;
+
 import som.interpreter.Frame;
 import som.interpreter.Interpreter;
 import som.vm.Universe;
 
 
 public abstract class SPrimitive extends SAbstractObject implements SInvokable {
+
+  private final SSymbol signature;
+  private SClass        holder;
 
   @Override
   public boolean isPrimitive() {
@@ -61,6 +66,16 @@ public abstract class SPrimitive extends SAbstractObject implements SInvokable {
     return false;
   }
 
+  public abstract void invoke(Frame frame, Interpreter interpreter);
+
+  public void indirectInvoke(Frame frame, Interpreter interpreter) {
+    invoke(frame, interpreter);
+  }
+
+  public void directInvoke(Frame frame, Interpreter interpreter, DirectCallNode callNode) {
+    invoke(frame, interpreter);
+  }
+
   @Override
   public SClass getSOMClass(final Universe universe) {
     return universe.primitiveClass;
@@ -85,7 +100,4 @@ public abstract class SPrimitive extends SAbstractObject implements SInvokable {
       }
     });
   }
-
-  private final SSymbol signature;
-  private SClass        holder;
 }

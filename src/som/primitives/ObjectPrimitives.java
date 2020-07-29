@@ -93,7 +93,7 @@ public class ObjectPrimitives extends Primitives {
         SSymbol selector = (SSymbol) arg;
 
         SInvokable invokable = self.getSOMClass(universe).lookupInvokable(selector);
-        invokable.invoke(frame, interpreter);
+        invokable.indirectInvoke(frame, interpreter);
       }
     });
 
@@ -108,7 +108,7 @@ public class ObjectPrimitives extends Primitives {
         SClass clazz = (SClass) arg2;
 
         SInvokable invokable = clazz.lookupInvokable(selector);
-        invokable.invoke(frame, interpreter);
+        invokable.indirectInvoke(frame, interpreter);
       }
     });
 
@@ -127,7 +127,7 @@ public class ObjectPrimitives extends Primitives {
         }
 
         SInvokable invokable = self.getSOMClass(universe).lookupInvokable(selector);
-        invokable.invoke(frame, interpreter);
+        invokable.indirectInvoke(frame, interpreter);
       }
     });
 

@@ -24,11 +24,13 @@
 
 package som.vmobjects;
 
-import som.primitives.Primitives;
-import som.vm.Universe;
-
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
+
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+
+import som.primitives.Primitives;
+import som.vm.Universe;
 
 public class SClass extends SObject {
 
@@ -131,6 +133,7 @@ public class SClass extends SObject {
     return numberOfClassFields;
   }
 
+  @TruffleBoundary
   public SInvokable lookupInvokable(final SSymbol signature) {
     SInvokable invokable;
 

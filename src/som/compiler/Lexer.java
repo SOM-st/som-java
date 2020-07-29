@@ -210,12 +210,14 @@ public class Lexer {
     bufp++;
 
     while (currentChar() != '\'') {
-      lexStringChar();
       while (endOfBuffer()) {
         if (fillBuffer() == -1) {
           return;
         }
         text.append('\n');
+      }
+      if (currentChar() != '\'') {
+        lexStringChar();
       }
     }
 
