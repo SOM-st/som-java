@@ -219,7 +219,7 @@ public class Parser {
       mgenc.addArgument("self");
 
       method(mgenc);
-      cgenc.addMethod(mgenc.assemble(universe));
+      cgenc.addMethod(mgenc.assemble(universe), this);
     }
   }
 

@@ -27,6 +27,7 @@ package som.compiler;
 import java.util.ArrayList;
 import java.util.List;
 
+import som.compiler.Parser.ParseError;
 import som.vm.Universe;
 import som.vmobjects.SArray;
 import som.vmobjects.SClass;
@@ -76,7 +77,15 @@ public class ClassGenerationContext {
     }
   }
 
-  public void addMethod(final som.vmobjects.SInvokable meth) {
+  public void addMethod(final som.vmobjects.SInvokable meth, final Parser parser) throws ParseError {
+    List<SInvokable> methods = classSide ? classMethods : instanceMethods;
+
+    for (SInvokable i : methods) {
+      if (i.getSignature() == meth.getSignature()) {
+        String msg = "A method with name " + meth.getSignature().getEmbeddedString() + " is already declared in " + name.getEmbeddedString();
+        throw new ParseError(msg, Symbol.NONE, parser);
+      }
+    }
     if (classSide) {
       classMethods.add(meth);
     } else {
