@@ -204,9 +204,14 @@ public class IntegerPrimitives extends Primitives {
     installInstancePrimitive(new SPrimitive("as32BitUnsignedValue", universe) {
       @Override
       public void invoke(final Frame frame, final Interpreter interpreter) {
-        SInteger rcvr = (SInteger) frame.pop();
-        frame.push(
-            universe.newInteger(Integer.toUnsignedLong((int) rcvr.getEmbeddedInteger())));
+        SNumber receiver = (SNumber) frame.pop();
+        int value;
+        if (receiver instanceof SInteger rcvr) {
+          value = (int) rcvr.getEmbeddedInteger();
+        } else {
+          value = ((SBigInteger) receiver).getEmbeddedBiginteger().intValue();
+        }
+        frame.push(universe.newInteger(Integer.toUnsignedLong(value)));
       }
     });
 
