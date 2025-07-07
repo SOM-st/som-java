@@ -64,7 +64,8 @@ public class SystemPrimitives extends Primitives {
         try {
           result = universe.loadClass(argument);
         } catch (ProgramDefinitionError e) {
-          universe.errorExit(e.toString());
+          Universe.errorPrintln("Program Definition Error: " + e.getMessage());
+          universe.exit(1);
         }
         frame.push(result != null ? result : universe.nilObject);
       }

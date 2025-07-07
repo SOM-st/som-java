@@ -64,7 +64,8 @@ public class Universe {
     try {
       u.interpret(arguments);
     } catch (ProgramDefinitionError e) {
-      u.errorExit(e.toString());
+      Universe.errorPrintln(e.getMessage());
+      u.exit(1);
     }
 
     // Exit with error code 0
@@ -711,7 +712,8 @@ public class Universe {
       }
       return result;
     } catch (ProgramDefinitionError e) {
-      errorExit(e.toString());
+      Universe.errorPrintln(e.getMessage());
+      exit(1);
       throw new RuntimeException(e);
     }
   }
