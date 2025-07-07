@@ -944,7 +944,7 @@ public class Parser {
       SSymbol varName = universe.symbolFor(var);
       if (!mgenc.hasField(varName)) {
         throw new ParseError("Trying to write to field with the name '" + var
-            + "', but field does not seem exist in class.", Symbol.NONE, this);
+            + "', but field does not seem exist in the class " + mgenc.getHolder().getName().getEmbeddedString() + ".", Symbol.NONE, this);
       }
       bcGen.emitPOPFIELD(mgenc, varName);
     }
