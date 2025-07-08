@@ -88,10 +88,18 @@ public class ClassGenerationContext {
     classSide = true;
   }
 
-  public void addField(final SSymbol field) {
+  public void addField(final SSymbol field) throws ProgramDefinitionError {
     if (classSide) {
+      if (classFields.contains(field)) {
+        throw new ProgramDefinitionError("The class " + name.getEmbeddedString()
+            + " cannot have two fields with the name `" + field.getEmbeddedString() + "`.");
+      }
       classFields.add(field);
     } else {
+      if (instanceFields.contains(field)) {
+        throw new ProgramDefinitionError("The class " + name.getEmbeddedString()
+            + " cannot have two fields with the name `" + field.getEmbeddedString() + "`.");
+      }
       instanceFields.add(field);
     }
   }
