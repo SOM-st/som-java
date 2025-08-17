@@ -15,7 +15,6 @@ failing_as_unspecified:
 
   # I think this one is about E vs e, but maybe also double rendering
   - Tests/double2.som
-  # - Tests/double_double_div.som
   # - Tests/int_double_div.som
   # - Tests/integer_asdouble.som
 
@@ -127,3 +126,5 @@ unsupported: []
 
 do_not_run:
   - Tests/case_insensitive.som
+  # floating point printing changes between JDK versions, I think
+  - Tests/double_double_div.som
