@@ -93,7 +93,7 @@ public class ObjectPrimitives extends Primitives {
         SSymbol selector = (SSymbol) arg;
 
         SInvokable invokable = self.getSOMClass(universe).lookupInvokable(selector);
-        invokable.invoke(frame, interpreter);
+        interpreter.activateOrDnu(selector, invokable);
       }
     });
 
@@ -108,7 +108,28 @@ public class ObjectPrimitives extends Primitives {
         SClass clazz = (SClass) arg2;
 
         SInvokable invokable = clazz.lookupInvokable(selector);
-        invokable.invoke(frame, interpreter);
+        interpreter.activateOrDnu(selector, invokable);
+      }
+    });
+
+    installInstancePrimitive(new SPrimitive("perform:withArguments:inSuperclass:", universe) {
+      @Override
+      public void invoke(final Frame frame, final Interpreter interpreter) {
+        SAbstractObject arg3 = frame.pop();
+        SAbstractObject arg2 = frame.pop();
+        SAbstractObject arg = frame.pop();
+        // Object self = frame.getStackElement(0);
+
+        SSymbol selector = (SSymbol) arg;
+        SArray args = (SArray) arg2;
+        SClass clazz = (SClass) arg3;
+
+        for (int i = 0; i < args.getNumberOfIndexableFields(); i++) {
+          frame.push(args.getIndexableField(i));
+        }
+
+        SInvokable invokable = clazz.lookupInvokable(selector);
+        interpreter.activateOrDnu(selector, invokable);
       }
     });
 
@@ -127,7 +148,7 @@ public class ObjectPrimitives extends Primitives {
         }
 
         SInvokable invokable = self.getSOMClass(universe).lookupInvokable(selector);
-        invokable.invoke(frame, interpreter);
+        interpreter.activateOrDnu(selector, invokable);
       }
     });
 

@@ -247,6 +247,11 @@ public final class SInteger extends SNumber {
 
   @Override
   public SNumber primLeftShift(final SNumber right, final Universe universe) {
+    if (right instanceof SBigInteger) {
+      throw new RuntimeException(
+          "Left shift with a BigInteger right operand is not supported.");
+    }
+
     long r = ((SInteger) right).embeddedInteger;
     assert r > 0;
 

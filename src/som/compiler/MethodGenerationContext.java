@@ -85,7 +85,12 @@ public class MethodGenerationContext {
     this(holderGenc, null);
   }
 
-  public void addArgument(final String arg) {
+  public void addArgument(final String arg) throws ProgramDefinitionError {
+    if (arguments.contains(arg)) {
+      throw new ProgramDefinitionError(
+          "A method cannot have two arguments with the same name `" + arg + "` in class "
+              + holderGenc.getName().getEmbeddedString() + ".");
+    }
     arguments.add(arg);
   }
 
@@ -193,15 +198,6 @@ public class MethodGenerationContext {
 
   public void setSignature(final SSymbol sig) {
     signature = sig;
-  }
-
-  public boolean addArgumentIfAbsent(final String arg) {
-    if (arguments.contains(arg)) {
-      return false;
-    }
-
-    arguments.add(arg);
-    return true;
   }
 
   public boolean isFinished() {

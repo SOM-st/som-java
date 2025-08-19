@@ -308,7 +308,7 @@ public class Parser {
     throw new IllegalStateException(err.toString());
   }
 
-  private void fields() {
+  private void fields() throws ProgramDefinitionError {
     if (accept(Or)) {
       while (sym == Identifier) {
         String var = variable();
@@ -333,7 +333,7 @@ public class Parser {
     expect(Primitive);
   }
 
-  private void pattern(final MethodGenerationContext mgenc) {
+  private void pattern(final MethodGenerationContext mgenc) throws ProgramDefinitionError {
     switch (sym) {
       case Identifier:
         unaryPattern(mgenc);
@@ -351,16 +351,18 @@ public class Parser {
     mgenc.setSignature(unarySelector());
   }
 
-  private void binaryPattern(final MethodGenerationContext mgenc) {
+  private void binaryPattern(final MethodGenerationContext mgenc)
+      throws ProgramDefinitionError {
     mgenc.setSignature(binarySelector());
-    mgenc.addArgumentIfAbsent(argument());
+    mgenc.addArgument(argument());
   }
 
-  private void keywordPattern(final MethodGenerationContext mgenc) {
+  private void keywordPattern(final MethodGenerationContext mgenc)
+      throws ProgramDefinitionError {
     StringBuilder kw = new StringBuilder();
     do {
       kw.append(keyword());
-      mgenc.addArgumentIfAbsent(argument());
+      mgenc.addArgument(argument());
     } while (sym == Keyword);
 
     mgenc.setSignature(universe.symbolFor(kw.toString()));
@@ -845,7 +847,7 @@ public class Parser {
   }
 
   private void nestedBlock(final MethodGenerationContext mgenc) throws ProgramDefinitionError {
-    mgenc.addArgumentIfAbsent("$block self");
+    mgenc.addArgument("$block self");
 
     expect(NewBlock);
     if (sym == Colon) {
@@ -880,15 +882,17 @@ public class Parser {
     expect(EndBlock);
   }
 
-  private void blockPattern(final MethodGenerationContext mgenc) {
+  private void blockPattern(final MethodGenerationContext mgenc)
+      throws ProgramDefinitionError {
     blockArguments(mgenc);
     expect(Or);
   }
 
-  private void blockArguments(final MethodGenerationContext mgenc) {
+  private void blockArguments(final MethodGenerationContext mgenc)
+      throws ProgramDefinitionError {
     do {
       expect(Colon);
-      mgenc.addArgumentIfAbsent(argument());
+      mgenc.addArgument(argument());
     } while (sym == Colon);
   }
 
@@ -944,7 +948,8 @@ public class Parser {
       SSymbol varName = universe.symbolFor(var);
       if (!mgenc.hasField(varName)) {
         throw new ParseError("Trying to write to field with the name '" + var
-            + "', but field does not seem exist in class.", Symbol.NONE, this);
+            + "', but field does not seem exist in the class "
+            + mgenc.getHolder().getName().getEmbeddedString() + ".", Symbol.NONE, this);
       }
       bcGen.emitPOPFIELD(mgenc, varName);
     }

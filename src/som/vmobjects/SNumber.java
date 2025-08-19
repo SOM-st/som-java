@@ -1,5 +1,6 @@
 package som.vmobjects;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import som.vm.Universe;
@@ -36,7 +37,8 @@ public abstract class SNumber extends SAbstractObject {
 
   protected final SNumber intOrBigInt(final double value, final Universe universe) {
     if (value > Long.MAX_VALUE || value < Long.MIN_VALUE) {
-      return universe.newBigInteger(new BigInteger(Double.toString(Math.rint(value))));
+      BigDecimal bigDecimal = new BigDecimal(value);
+      return universe.newBigInteger(bigDecimal.toBigInteger());
     } else {
       return universe.newInteger((long) Math.rint(value));
     }

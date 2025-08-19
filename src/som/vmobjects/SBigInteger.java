@@ -24,6 +24,7 @@
 
 package som.vmobjects;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import som.vm.Universe;
@@ -73,8 +74,10 @@ public final class SBigInteger extends SNumber {
 
   private BigInteger asBigInteger(final SNumber right) {
     BigInteger r;
-    if (right instanceof SInteger) {
-      r = BigInteger.valueOf(((SInteger) right).getEmbeddedInteger());
+    if (right instanceof SInteger r1) {
+      r = BigInteger.valueOf(r1.getEmbeddedInteger());
+    } else if (right instanceof SDouble r1) {
+      r = BigDecimal.valueOf(r1.getEmbeddedDouble()).toBigInteger();
     } else {
       r = ((SBigInteger) right).embeddedBiginteger;
     }
@@ -117,8 +120,10 @@ public final class SBigInteger extends SNumber {
   @Override
   public SNumber primDoubleDivide(final SNumber right, final Universe universe) {
     double r;
-    if (right instanceof SInteger) {
-      r = ((SInteger) right).getEmbeddedInteger();
+    if (right instanceof SInteger i) {
+      r = i.getEmbeddedInteger();
+    } else if (right instanceof SDouble d) {
+      r = d.getEmbeddedDouble();
     } else {
       r = ((SBigInteger) right).embeddedBiginteger.doubleValue();
     }
